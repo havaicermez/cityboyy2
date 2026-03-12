@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Slide to Find Your Spirit Animal 🐺🦊</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      font-family: system-ui, sans-serif;
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    h1 {
+      font-size: 2.4rem;
+      margin: 0 20px 40px;
+      text-align: center;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.4);
+    }
+
+    .slider-container {
+      width: 90%;
+      max-width: 380px;
+      height: 70px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 999px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: inset 0 4px 12px rgba(0,0,0,0.3);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,0.2);
+      cursor: pointer; /* makes whole bar look clickable */
+    }
+
+    .track {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      font-weight: 500;
+      letter-spacing: 1px;
+      color: rgba(255,255,255,0.9);
+      pointer-events: none;
+      user-select: none;
+      transition: opacity 0.4s ease;
+    }
+
+    .thumb {
+      width: 68px;
+      height: 68px;
+      background: white;
+      border-radius: 50%;
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      cursor: grab;
+      transition: background 0.3s ease;
+      user-select: none;
+      touch-action: pan-y;
+    }
+
+    .thumb:active {
+      cursor: grabbing;
+      background: #e0ffe0;
+    }
+
+    .glow {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,0,0,0.4), transparent);
+      pointer-events: none;
+      animation: slideGlow 2s infinite linear;
+      opacity: 0.7;
+    }
+
+    @keyframes slideGlow {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .result {
+      margin-top: 60px;
+      font-size: 2.8rem;
+      text-align: center;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: all 0.8s ease;
+      text-shadow: 0 0 20px red;
+    }
+
+    .revealed .result {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .small-text {
+      font-size: 1.2rem;
+      margin-top: 20px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Discover Your Spirit Animal</h1>
+
+  <div class="slider-container" id="sliderBox">
+    <div class="glow"></div>
+    <div class="track" id="instruction">Slide to reveal →</div>
+    <div class="thumb" id="thumb">🐾</div>
+  </div>
+
+  <div class="result" id="result">
+    CITY BOY<br>🗣️🔥<br>
+    <span class="small-text">it's going forever now... no escape 😈</span>
+  </div>
+
+  <!-- The prank audio - loops non-stop after first touch -->
+  <audio id="prankAudio" loop preload="auto">
+    <source src="https://www.myinstants.com/media/sounds/city-boy.mp3" type="audio/mpeg">
+    <!-- Backup: <source src="https://www.myinstants.com/media/sounds/city-boy-city-boy.mp3" type="audio/mpeg"> -->
+    Your browser doesn't support the audio element.
+  </audio>
+
+  <script>
+    const sliderBox = document.getElementById('sliderBox');
+    const thumb = document.getElementById('thumb');
+    const result = document.getElementById('result');
+    const audio = document.getElementById('prankAudio');
+
+    let startX = 0;
+    let currentX = 0;
+    let maxSlide = 0;
+    let isDragging = false;
+    let audioStarted = false;
+
+    function updateMaxSlide() {
+      maxSlide = sliderBox.offsetWidth - thumb.offsetWidth - 8;
+    }
+
+    window.addEventListener('resize', updateMaxSlide);
+    updateMaxSlide();
+
+    function setPosition(x) {
+      currentX = Math.max(0, Math.min(x, maxSlide));
+      thumb.style.transform = `translate(${currentX}px, -50%)`;
+    }
+
+    function triggerPrank() {
+      if (audioStarted) return;
+      audioStarted = true;
+
+      audio.currentTime = 0;
+      audio.volume = 1.0;
+      audio.play().catch(err => {
+        console.log("Play failed (rare):", err);
+        // Fallback: try again after short delay if gesture blocked
+        setTimeout(() => audio.play(), 100);
+      });
+
+      // Show chaos text immediately
+      document.body.classList.add('revealed');
+
+      // Optional: full slide animation for lols even though sound already started
+      setPosition(maxSlide);
+      sliderBox.classList.add('success');
+    }
+
+    // Trigger on touch/click ANYWHERE on the slider (bait area)
+    sliderBox.addEventListener('touchstart', (e) => {
+      e.preventDefault(); // stop any scroll bounce
+      triggerPrank();
+      // Start drag too
+      isDragging = true;
+      startX = e.touches[0].clientX - currentX;
+      thumb.style.transition = 'none';
+    }, { passive: false });
+
+    sliderBox.addEventListener('mousedown', (e) => {
+      triggerPrank();
+      isDragging = true;
+      startX = e.clientX - currentX;
+      thumb.style.transition = 'none';
+    });
+
+    // Keep drag working for fake "slide" feel
+    function onMove(e) {
+      if (!isDragging) return;
+      e.preventDefault();
+      const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+      setPosition(clientX - startX);
+    }
+
+    function onEnd() {
+      isDragging = false;
+      thumb.style.transition = 'transform 0.4s ease';
+      // Snap back or stay if they want, but sound already blasting
+      if (currentX < maxSlide * 0.5) setPosition(0);
+    }
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onEnd);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('touchend', onEnd);
+
+    // Optional toggle if they tap result (troll them more)
+    result.addEventListener('click', () => {
+      if (audio.paused) audio.play();
+      else audio.pause();
+    });
+  </script>
+
+</body>
+</html>
