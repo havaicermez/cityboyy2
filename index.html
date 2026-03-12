@@ -36,7 +36,7 @@
       box-shadow: inset 0 4px 12px rgba(0,0,0,0.3);
       backdrop-filter: blur(6px);
       border: 1px solid rgba(255,255,255,0.2);
-      cursor: pointer; /* makes whole bar look clickable */
+      cursor: pointer;
     }
 
     .track {
@@ -95,12 +95,12 @@
 
     .result {
       margin-top: 60px;
-      font-size: 2.8rem;
+      font-size: 2.5rem;
       text-align: center;
       opacity: 0;
       transform: translateY(30px);
       transition: all 0.8s ease;
-      text-shadow: 0 0 20px red;
+      text-shadow: 0 0 15px red;
     }
 
     .revealed .result {
@@ -108,10 +108,14 @@
       transform: translateY(0);
     }
 
-    .small-text {
-      font-size: 1.2rem;
-      margin-top: 20px;
-      opacity: 0.8;
+    #errorMsg {
+      position: fixed;
+      bottom: 20px;
+      background: rgba(255,0,0,0.7);
+      padding: 10px 20px;
+      border-radius: 10px;
+      opacity: 0;
+      transition: opacity 0.5s;
     }
   </style>
 </head>
@@ -126,15 +130,14 @@
   </div>
 
   <div class="result" id="result">
-    CITY BOY<br>🗣️🔥<br>
-    <span class="small-text"></span>
+    <!-- Empty - no visible text after prank starts -->
   </div>
 
-  <!-- The prank audio - loops non-stop after first touch -->
+  <div id="errorMsg">No sound? Check volume / browser / console (F12)</div>
+
+  <!-- EXACT SAME AUDIO METHOD AS YOUR WORKING "TAP ANYWHERE" CODE -->
   <audio id="prankAudio" loop preload="auto">
-    <source src="https://www.myinstants.com/media/sounds/city-boy.mp3" type="audio/mpeg">
-    <!-- Backup: <source src="https://www.myinstants.com/media/sounds/city-boy-city-boy.mp3" type="audio/mpeg"> -->
-    Your browser doesn't support the audio element.
+    <source src="cityboy.mp3" type="audio/mpeg">
   </audio>
 
   <script>
@@ -142,6 +145,7 @@
     const thumb = document.getElementById('thumb');
     const result = document.getElementById('result');
     const audio = document.getElementById('prankAudio');
+    const errorMsg = document.getElementById('errorMsg');
 
     let startX = 0;
     let currentX = 0;
@@ -167,25 +171,27 @@
 
       audio.currentTime = 0;
       audio.volume = 1.0;
-      audio.play().catch(err => {
-        console.log("Play failed (rare):", err);
-        // Fallback: try again after short delay if gesture blocked
-        setTimeout(() => audio.play(), 100);
-      });
 
-      // Show chaos text immediately
-      document.body.classList.add('revealed');
-
-      // Optional: full slide animation for lols even though sound already started
-      setPosition(maxSlide);
-      sliderBox.classList.add('success');
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          console.log("Prank audio started!");
+          document.body.classList.add('revealed');
+          setPosition(maxSlide);
+          sliderBox.classList.add('success');
+          if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+        }).catch(err => {
+          console.error("Play error:", err);
+          errorMsg.style.opacity = 1;
+          setTimeout(() => { errorMsg.style.opacity = 0; }, 5000);
+          setTimeout(() => audio.play(), 300);
+        });
+      }
     }
 
-    // Trigger on touch/click ANYWHERE on the slider (bait area)
     sliderBox.addEventListener('touchstart', (e) => {
-      e.preventDefault(); // stop any scroll bounce
+      e.preventDefault();
       triggerPrank();
-      // Start drag too
       isDragging = true;
       startX = e.touches[0].clientX - currentX;
       thumb.style.transition = 'none';
@@ -198,7 +204,6 @@
       thumb.style.transition = 'none';
     });
 
-    // Keep drag working for fake "slide" feel
     function onMove(e) {
       if (!isDragging) return;
       e.preventDefault();
@@ -209,7 +214,6 @@
     function onEnd() {
       isDragging = false;
       thumb.style.transition = 'transform 0.4s ease';
-      // Snap back or stay if they want, but sound already blasting
       if (currentX < maxSlide * 0.5) setPosition(0);
     }
 
@@ -218,7 +222,6 @@
     window.addEventListener('touchmove', onMove, { passive: false });
     window.addEventListener('touchend', onEnd);
 
-    // Optional toggle if they tap result (troll them more)
     result.addEventListener('click', () => {
       if (audio.paused) audio.play();
       else audio.pause();
